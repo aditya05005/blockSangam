@@ -1,0 +1,6 @@
+slot_id,section,line,start_time,end_time,block_type,traffic_block,power_isolation,snt_disconnection
+SLOT-001,B-C,UP,2026-08-27T00:00:00+05:30,2026-08-27T01:00:00+05:30,FULL_BLOCK,true,true,true
+SLOT-002,B-C,UP,2026-08-27T01:00:00+05:30,2026-08-27T03:30:00+05:30,FULL_BLOCK,true,true,true
+SLOT-003,B-C,DOWN,2026-08-27T01:00:00+05:30,2026-08-27T02:00:00+05:30,FULL_BLOCK,true,true,true
+SLOT-004,A-B,DOWN,2026-08-28T00:30:00+05:30,2026-08-28T02:00:00+05:30,FULL_BLOCK,true,false,true
+SLOT-005,C-D,UP,2026-08-29T01:00:00+05:30,2026-08-29T03:00:00+05:30,FULL_BLOCK,true,true,false
