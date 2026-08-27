@@ -24,7 +24,10 @@ class BlockSangamPipeline:
             raise ValueError(f"Input dataset contains {len(dataset.errors)} error(s)")
 
         priorities = self.priority_engine.rank(dataset.tasks)
-        candidates = self.candidate_generator.generate(dataset, priorities)
+        # CandidateGenerator derives feasibility from the canonical dataset.
+        # Priority results are retained for the scheduling objective; they are
+        # intentionally not passed into candidate generation.
+        candidates = self.candidate_generator.generate(dataset)
         schedule = self.scheduler.solve(dataset, candidates)
 
         selected = type(candidates)(
