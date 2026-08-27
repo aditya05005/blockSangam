@@ -44,7 +44,7 @@ def test_full_base_dataset_loads_without_errors():
     assert len(dataset.goods_movements) == 3
     # Seven slots cover the six section/line combinations needed by the
     # synthetic corridor data, with an additional B-C/UP slot for capacity.
-    assert len(dataset.corridor_slots) == 7
+    assert len(dataset.corridor_slots) == 8
     assert len(dataset.resources) == 5
     assert len(dataset.locked_commitments) == 3
     assert len(dataset.tasks) == 11
