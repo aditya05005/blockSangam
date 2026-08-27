@@ -3,11 +3,13 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class PriorityConfig:
-    criticality_weight: float = 0.25
-    defect_severity_weight: float = 0.25
-    asset_criticality_weight: float = 0.20
-    failure_consequence_weight: float = 0.20
-    deferral_history_weight: float = 0.10
+    # Core factors intentionally sum to 0.90; the remaining 0.10 is reserved
+    # for the mandatory-task bonus so the final score remains in [0, 1].
+    criticality_weight: float = 0.225
+    defect_severity_weight: float = 0.225
+    asset_criticality_weight: float = 0.18
+    failure_consequence_weight: float = 0.18
+    deferral_history_weight: float = 0.09
     mandatory_bonus: float = 0.10
     deferral_cap: int = 5
 
@@ -21,8 +23,8 @@ class PriorityConfig:
         )
         if any(weight < 0 for weight in weights):
             raise ValueError("Priority weights cannot be negative")
-        if abs(sum(weights) - 1.0) > 1e-9:
-            raise ValueError("Priority weights must sum to 1.0")
+        if abs(sum(weights) + self.mandatory_bonus - 1.0) > 1e-9:
+            raise ValueError("Core weights plus mandatory_bonus must sum to 1.0")
         if not 0 <= self.mandatory_bonus <= 1:
             raise ValueError("mandatory_bonus must be between 0 and 1")
         if self.deferral_cap <= 0:
