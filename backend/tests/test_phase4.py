@@ -4,7 +4,7 @@ from app.domain.models import Department, Line, Task
 from app.priority import PriorityConfig, PriorityEngine, calculate_score
 
 
-def make_task(task_id: str, value: int = 3, *, mandatory: bool = False, deferral: int = 0) -> Task:
+def make_task(task_id: str, value: int = 3, *, mandatory: bool = False, deferral: int = 0, criticality: int | None = None) -> Task:
     return Task(
         task_id=task_id,
         department=Department.ENGINEERING,
@@ -14,7 +14,7 @@ def make_task(task_id: str, value: int = 3, *, mandatory: bool = False, deferral
         duration_minutes=30,
         earliest_start=datetime(2026, 8, 27, 1, 0, tzinfo=timezone.utc),
         latest_finish=datetime(2026, 8, 27, 4, 0, tzinfo=timezone.utc),
-        criticality=value,
+        criticality=value if criticality is None else criticality,
         defect_severity=value,
         asset_criticality=value,
         failure_consequence=value,
@@ -52,16 +52,12 @@ def test_score_is_explainable_and_bounded():
     config = PriorityConfig()
     score, components = calculate_score(make_task("MAX", 5, mandatory=True, deferral=99), config)
     assert score == 1.0
-    assert components.total > 1.0
+    assert components.total == 1.0
 
 
 def test_ranking_is_deterministic():
     engine = PriorityEngine()
-    tasks = [
-        make_task("B", 3),
-        make_task("A", 3),
-        make_task("C", 5, mandatory=True),
-    ]
+    tasks = [make_task("B", 3), make_task("A", 3), make_task("C", 5, mandatory=True)]
     ranked = engine.rank(tasks)
     assert [item.task_id for item in ranked] == ["C", "A", "B"]
 
@@ -69,13 +65,14 @@ def test_ranking_is_deterministic():
 def test_weight_configuration_changes_score():
     default = PriorityConfig()
     criticality_heavy = PriorityConfig(
-        criticality_weight=0.60,
-        defect_severity_weight=0.10,
-        asset_criticality_weight=0.10,
-        failure_consequence_weight=0.10,
-        deferral_history_weight=0.10,
+        criticality_weight=0.54,
+        defect_severity_weight=0.135,
+        asset_criticality_weight=0.135,
+        failure_consequence_weight=0.045,
+        deferral_history_weight=0.045,
+        mandatory_bonus=0.10,
     )
-    task = make_task("T", 5)
+    task = make_task("T", value=1, criticality=5)
     default_score, _ = calculate_score(task, default)
     changed_score, _ = calculate_score(task, criticality_heavy)
-    assert changed_score == default_score
+    assert changed_score > default_score
