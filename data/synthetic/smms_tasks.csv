@@ -1,4 +1,4 @@
 task_id,department,section,line,task_type,duration_minutes,earliest_start,latest_finish,criticality,defect_severity,asset_criticality,failure_consequence,deferral_history,mandatory,requires_traffic_block,requires_power_isolation,requires_snt_disconnection,restoration_minutes
 SNT-001,SNT,B-C,UP,Track Circuit Testing,45,2026-08-27T00:00:00+05:30,2026-08-30T04:00:00+05:30,4,4,5,4,1,true,true,false,true,15
-SNT-002,SNT,B-C,DOWN,Signal Relay Inspection,60,2026-08-27T00:00:00+05:30,2026-08-28T04:00:00+05:30,5,5,5,5,2,true,true,false,true,35
+SNT-002,SNT,B-C,DOWN,Signal Relay Inspection,60,2026-08-27T00:00:00+05:30,2026-08-28T04:35:00+05:30,5,5,5,5,2,true,true,false,true,35
 SNT-003,SNT,A-B,UP,Axle Counter Testing,30,2026-08-28T00:00:00+05:30,2026-08-31T04:00:00+05:30,3,3,4,3,0,false,true,false,true,10
