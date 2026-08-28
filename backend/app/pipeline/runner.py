@@ -1,6 +1,6 @@
 from time import monotonic
 
-from app.loaders import load_dataset
+from app.loaders import CanonicalDataset, load_dataset
 from app.priority import PriorityEngine
 from app.candidates import CandidateGenerator
 from app.scheduler import CPSATScheduler
@@ -18,8 +18,12 @@ class BlockSangamPipeline:
         self.validator = ScheduleValidator()
 
     def run(self, data_dir: str, *, goods_forecast: str = "base") -> PipelineResult:
-        started = monotonic()
         dataset = load_dataset(data_dir, goods_forecast=goods_forecast)
+        return self.run_dataset(dataset)
+
+    def run_dataset(self, dataset: CanonicalDataset) -> PipelineResult:
+        """Run against an already-created snapshot, never against live files."""
+        started = monotonic()
         if dataset.errors:
             raise ValueError(f"Input dataset contains {len(dataset.errors)} error(s)")
 
