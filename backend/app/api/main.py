@@ -37,7 +37,7 @@ from app.database.session import create_database
 from app.loaders import load_dataset
 from app.pipeline import BlockSangamPipeline
 from app.priority import PriorityEngine
-from app.scenarios import available_scenarios, materialize_scenario, scenario_definition
+from app.scenarios import available_scenarios, materialize_scenario, scenario_definition, scenario_options, simulate_custom_scenario, simulate_scenario
 from app.planning import (
     build_baseline,
     build_plan_payload,
@@ -75,6 +75,43 @@ class ScheduleRequest(BaseModel):
     # ``forecast`` is a friendly alias used by simple API clients.
     forecast: str | None = Field(default=None, min_length=1, max_length=30)
     max_solve_time: float = Field(default=10.0, gt=0, le=300)
+
+
+class ScenarioSimulationRequest(BaseModel):
+    data_dir: str | None = None
+    max_solve_time: float = Field(default=10.0, gt=0, le=300)
+
+
+class CorridorClosureRequest(BaseModel):
+    section: str = Field(min_length=1)
+    line: Literal["UP", "DOWN"]
+    start_time: datetime
+    end_time: datetime
+
+
+class OptionalTaskRequest(BaseModel):
+    task_id: str = Field(min_length=1, max_length=50)
+    department: Literal["ENGINEERING", "SNT", "TRD"]
+    section: str = Field(min_length=1)
+    line: Literal["UP", "DOWN"]
+    task_type: str = Field(min_length=1, max_length=100)
+    duration_minutes: int = Field(gt=0, le=720)
+    earliest_start: datetime
+    latest_finish: datetime
+    criticality: int = Field(default=3, ge=1, le=5)
+    defect_severity: int = Field(default=3, ge=1, le=5)
+    asset_criticality: int = Field(default=3, ge=1, le=5)
+    failure_consequence: int = Field(default=3, ge=1, le=5)
+    requires_power_isolation: bool = False
+    requires_snt_disconnection: bool = False
+
+
+class CustomScenarioSimulationRequest(ScenarioSimulationRequest):
+    goods_forecast: Literal["base", "stressed"] = "base"
+    remove_corridor_slot_ids: list[str] = Field(default_factory=list)
+    unavailable_resource_ids: list[str] = Field(default_factory=list)
+    corridor_closure: CorridorClosureRequest | None = None
+    add_optional_task: OptionalTaskRequest | None = None
 
 
 class ReplanRequest(BaseModel):
@@ -348,6 +385,10 @@ def create_app(database_url: str | None = None) -> FastAPI:
     def scenarios():
         return {"scenarios": available_scenarios()}
 
+    @app.get("/api/scenario-options")
+    def get_scenario_options():
+        return scenario_options(_default_data_dir())
+
     @app.post("/api/schedule")
     def schedule(request: ScheduleRequest = ScheduleRequest()):
         data_dir = request.data_dir or _default_data_dir()
@@ -372,6 +413,25 @@ def create_app(database_url: str | None = None) -> FastAPI:
         except (FileNotFoundError, ValueError) as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         return _schedule_response(result, dataset, scenario=request.scenario)
+
+    @app.post("/api/scenarios/{scenario_id}/simulate")
+    def simulate(scenario_id: str, request: ScenarioSimulationRequest = ScenarioSimulationRequest()):
+        data_dir = request.data_dir or _default_data_dir()
+        try:
+            scenario_definition(scenario_id)
+            return simulate_scenario(scenario_id, data_dir, max_solve_time_seconds=request.max_solve_time)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        except FileNotFoundError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @app.post("/api/scenarios/simulate")
+    def simulate_custom(request: CustomScenarioSimulationRequest):
+        data_dir = request.data_dir or _default_data_dir()
+        try:
+            return simulate_custom_scenario(request.model_dump(exclude_none=True), data_dir, max_solve_time_seconds=request.max_solve_time)
+        except (ValueError, FileNotFoundError) as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     @app.post("/api/imports/validate")
     def validate_import(request: ImportRequest = ImportRequest()):

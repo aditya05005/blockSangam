@@ -135,7 +135,7 @@ def test_phase11_independent_validator_rejects_corrupted_plan_without_repairing(
 
 
 def test_phase11_scenario_catalog_is_deterministic_and_complete():
-    expected = {"base", "missing_corridor", "resource_unavailable", "locked_commitment", "stressed_goods", "competing_maintenance"}
+    expected = {"base", "missing_corridor", "resource_unavailable", "locked_commitment", "stressed_goods", "competing_maintenance", "corridor_closure"}
     from app.scenarios import available_scenarios
 
     assert {item["name"] for item in available_scenarios()} == expected
@@ -146,7 +146,7 @@ def test_phase11_api_exposes_scenarios_and_preserves_infeasible_status():
     catalog = api.get("/api/scenarios")
     assert catalog.status_code == 200
     assert {item["name"] for item in catalog.json()["scenarios"]} == {
-        "base", "missing_corridor", "resource_unavailable", "locked_commitment", "stressed_goods", "competing_maintenance",
+        "base", "missing_corridor", "resource_unavailable", "locked_commitment", "stressed_goods", "competing_maintenance", "corridor_closure",
     }
 
     response = api.post("/api/schedule", json={"scenario": "missing_corridor", "max_solve_time": 1})

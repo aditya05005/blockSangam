@@ -18,6 +18,11 @@ class ScenarioDefinition:
     expected_behavior: str
     forecast: str = "base"
     transform: ScenarioTransform | None = None
+    modifications: tuple[str, ...] = ()
+
+    @property
+    def scenario_id(self) -> str:
+        return self.name
 
 
 def _rewrite_csv(path: Path, transform: Callable[[list[dict[str, str]]], list[dict[str, str]]]) -> None:
@@ -100,24 +105,42 @@ def _add_competing_maintenance(directory: Path) -> None:
     _rewrite_csv(directory / "tms_tasks.csv", add_task)
 
 
+def _add_corridor_closure(directory: Path) -> None:
+    """Use the existing locked-commitment model for a temporary closure."""
+    def add_closure(rows):
+        rows.append({
+            "commitment_id": "SCN-CLOSURE-AB-UP",
+            "section": "A-B", "line": "UP",
+            "start_time": "2026-08-28T00:30:00+05:30",
+            "end_time": "2026-08-28T02:00:00+05:30",
+            "block_type": "FULL_BLOCK",
+            "description": "Scenario corridor closure", "locked": "true",
+        })
+        return rows
+    _rewrite_csv(directory / "locked_commitments.csv", add_closure)
+
+
 SCENARIOS = {
     "base": ScenarioDefinition(
-        "base", "Base", "Unmodified synthetic reference dataset.", "The pipeline should return a valid optimal or feasible plan.",
+        "base", "Base", "Unmodified synthetic reference dataset.", "The pipeline should return a valid optimal or feasible plan.", modifications=("none",),
     ),
     "missing_corridor": ScenarioDefinition(
-        "missing_corridor", "Missing Corridor Capacity", "Removes SLOT-004, the only compatible window for ENG-002.", "ENG-002 should have no candidates and the mandatory schedule should be infeasible.", transform=_remove_corridor_capacity,
+        "missing_corridor", "Missing Corridor Capacity", "Removes SLOT-004, the only compatible window for ENG-002.", "ENG-002 should have no candidates and the mandatory schedule should be infeasible.", transform=_remove_corridor_capacity, modifications=("remove SLOT-004",),
     ),
     "resource_unavailable": ScenarioDefinition(
-        "resource_unavailable", "Resource Unavailable", "Removes the Engineering resource pool from the calendar.", "Engineering candidates should be rejected for resource unavailability; mandatory Engineering work cannot be scheduled.", transform=_remove_engineering_resource,
+        "resource_unavailable", "Resource Unavailable", "Removes the Engineering resource pool from the calendar.", "Engineering candidates should be rejected for resource unavailability; mandatory Engineering work cannot be scheduled.", transform=_remove_engineering_resource, modifications=("remove Engineering resource availability",),
     ),
     "locked_commitment": ScenarioDefinition(
-        "locked_commitment", "Locked Commitment Conflict", "Adds a locked A-B DOWN commitment over ENG-002's reference window and extends the local envelope so a later candidate remains possible.", "The lock must remain protected and ENG-002 should move to a later valid candidate.", transform=_add_locked_conflict,
+        "locked_commitment", "Locked Commitment Conflict", "Adds a locked A-B DOWN commitment over ENG-002's reference window and extends the local envelope so a later candidate remains possible.", "The lock must remain protected and ENG-002 should move to a later valid candidate.", transform=_add_locked_conflict, modifications=("add SCN-LOCK-ENG002",),
     ),
     "stressed_goods": ScenarioDefinition(
-        "stressed_goods", "Stressed Goods Forecast", "Uses the existing goods_forecast_stressed.csv without changing base inputs.", "The stressed forecast should be processed honestly and produce either a valid result or an explicit infeasible/invalid result.", forecast="stressed",
+        "stressed_goods", "Stressed Goods Forecast", "Uses the existing goods_forecast_stressed.csv without changing base inputs.", "The stressed forecast should be processed honestly and produce either a valid result or an explicit infeasible/invalid result.", forecast="stressed", modifications=("use stressed goods forecast",),
     ),
     "competing_maintenance": ScenarioDefinition(
-        "competing_maintenance", "Competing Maintenance", "Adds one optional Engineering task competing for the B-C UP corridor and Engineering resource.", "CP-SAT should preserve mandatory feasibility and avoid corridor/resource overlap; the optional task may be rejected.", transform=_add_competing_maintenance,
+        "competing_maintenance", "Competing Maintenance", "Adds one optional Engineering task competing for the B-C UP corridor and Engineering resource.", "CP-SAT should preserve mandatory feasibility and avoid corridor/resource overlap; the optional task may be rejected.", transform=_add_competing_maintenance, modifications=("add SCN-ENG-001",),
+    ),
+    "corridor_closure": ScenarioDefinition(
+        "corridor_closure", "Corridor Closure", "Adds a temporary locked full-block closure on A-B UP.", "Affected candidates should be removed while mandatory feasibility remains enforced.", transform=_add_corridor_closure, modifications=("close A-B UP from 00:30 to 02:00",),
     ),
 }
 
@@ -131,7 +154,7 @@ def scenario_definition(name: str) -> ScenarioDefinition:
 
 def available_scenarios() -> list[dict[str, str]]:
     return [
-        {"name": definition.name, "label": definition.label, "description": definition.description, "expected_behavior": definition.expected_behavior, "forecast": definition.forecast}
+        {"name": definition.name, "label": definition.label, "description": definition.description, "expected_behavior": definition.expected_behavior, "forecast": definition.forecast, "modifications": list(definition.modifications)}
         for definition in SCENARIOS.values()
     ]
 
