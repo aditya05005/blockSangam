@@ -1,4 +1,8 @@
 task_id,department,section,line,task_type,duration_minutes,earliest_start,latest_finish,criticality,defect_severity,asset_criticality,failure_consequence,deferral_history,mandatory,requires_traffic_block,requires_power_isolation,requires_snt_disconnection
-TRD-001,TRD,B-C,UP,OHE Inspection,60,2026-08-27T00:00:00+05:30,2026-08-30T04:00:00+05:30,4,4,5,4,1,true,true,true,false
-TRD-002,TRD,C-D,DOWN,OHE Maintenance,75,2026-08-28T00:00:00+05:30,2026-08-31T04:00:00+05:30,5,4,5,5,1,true,true,true,false
-TRD-003,TRD,A-B,UP,Electrical Inspection,45,2026-08-27T00:00:00+05:30,2026-08-29T04:00:00+05:30,3,3,4,3,0,false,true,true,false
+TRD-001,TRD,Kurla-Chembur,UP,OHE Inspection,60,2026-08-27T00:00:00+05:30,2026-08-30T04:00:00+05:30,4,4,5,4,1,true,true,true,false
+TRD-002,TRD,Chembur-Mankhurd,DOWN,OHE Maintenance,75,2026-08-28T00:00:00+05:30,2026-08-31T04:00:00+05:30,5,4,5,5,1,true,true,true,false
+TRD-003,TRD,Thane-Kurla,UP,Electrical Inspection,45,2026-08-27T00:00:00+05:30,2026-08-29T04:00:00+05:30,3,3,4,3,0,false,true,true,false
+TRD-004,TRD,Kurla-Chembur,DOWN,OHE Section Insulator Inspection,60,2026-08-29T02:00:00+05:30,2026-08-29T04:00:00+05:30,4,4,5,4,1,true,true,true,false
+TRD-005,TRD,Chembur-Mankhurd,UP,Contact Wire Geometry Check,60,2026-08-30T01:00:00+05:30,2026-08-30T03:00:00+05:30,4,3,5,4,1,true,true,true,false
+TRD-006,TRD,Dadar-Kurla,DOWN,OHE Cantilever Inspection,60,2026-08-28T04:30:00+05:30,2026-08-28T06:30:00+05:30,4,4,5,4,1,true,true,true,false
+TRD-007,TRD,Ghatkopar-Vikhroli,UP,Contact Wire Stagger Measurement,60,2026-08-29T04:30:00+05:30,2026-08-29T06:30:00+05:30,4,3,5,4,1,true,true,true,false

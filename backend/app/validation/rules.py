@@ -5,7 +5,12 @@ from typing import Iterable
 from app.domain.models import CorridorSlot, LockedCommitment, Resource, Task, TrainMovement
 from .result import ValidationResult
 
-VALID_SECTIONS = {"A-B", "B-C", "C-D"}
+VALID_SECTIONS = {
+    "Thane-Kurla", "Kurla-Chembur", "Chembur-Mankhurd",
+    "CSMT-Dadar", "Dadar-Kurla", "Ghatkopar-Vikhroli", "Mankhurd-Vashi",
+    # Retained for unit fixtures and backwards-compatible persisted snapshots.
+    "A-B", "B-C", "C-D",
+}
 
 
 def _timezone_aware(value: datetime) -> bool:

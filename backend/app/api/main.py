@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import csv
 import io
+import os
+import secrets
 import tempfile
 import uuid
 from dataclasses import asdict
@@ -16,8 +18,10 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import sessionmaker
 
 from app.candidates import CandidateGenerator
+from app.output.pdf_report import build_plan_pdf
 from app.database.models import (
     DataSnapshot,
+    DepartmentFeedback,
     ExistingCommitment,
     ImportErrorRecord,
     MaintenanceTask,
@@ -37,7 +41,7 @@ from app.database.session import create_database
 from app.loaders import load_dataset
 from app.pipeline import BlockSangamPipeline
 from app.priority import PriorityEngine
-from app.scenarios import available_scenarios, materialize_scenario, scenario_definition
+from app.scenarios import available_scenarios, materialize_scenario, scenario_definition, scenario_options, simulate_custom_scenario, simulate_scenario
 from app.planning import (
     build_baseline,
     build_plan_payload,
@@ -77,6 +81,43 @@ class ScheduleRequest(BaseModel):
     max_solve_time: float = Field(default=10.0, gt=0, le=300)
 
 
+class ScenarioSimulationRequest(BaseModel):
+    data_dir: str | None = None
+    max_solve_time: float = Field(default=10.0, gt=0, le=300)
+
+
+class CorridorClosureRequest(BaseModel):
+    section: str = Field(min_length=1)
+    line: Literal["UP", "DOWN"]
+    start_time: datetime
+    end_time: datetime
+
+
+class OptionalTaskRequest(BaseModel):
+    task_id: str = Field(min_length=1, max_length=50)
+    department: Literal["ENGINEERING", "SNT", "TRD"]
+    section: str = Field(min_length=1)
+    line: Literal["UP", "DOWN"]
+    task_type: str = Field(min_length=1, max_length=100)
+    duration_minutes: int = Field(gt=0, le=720)
+    earliest_start: datetime
+    latest_finish: datetime
+    criticality: int = Field(default=3, ge=1, le=5)
+    defect_severity: int = Field(default=3, ge=1, le=5)
+    asset_criticality: int = Field(default=3, ge=1, le=5)
+    failure_consequence: int = Field(default=3, ge=1, le=5)
+    requires_power_isolation: bool = False
+    requires_snt_disconnection: bool = False
+
+
+class CustomScenarioSimulationRequest(ScenarioSimulationRequest):
+    goods_forecast: Literal["base", "stressed"] = "base"
+    remove_corridor_slot_ids: list[str] = Field(default_factory=list)
+    unavailable_resource_ids: list[str] = Field(default_factory=list)
+    corridor_closure: CorridorClosureRequest | None = None
+    add_optional_task: OptionalTaskRequest | None = None
+
+
 class ReplanRequest(BaseModel):
     forecast: str = Field(default="stressed", min_length=1, max_length=30)
     planning_mode: Literal["weekly", "monthly"] | None = None
@@ -85,6 +126,45 @@ class ReplanRequest(BaseModel):
 
 class StatusRequest(BaseModel):
     status: PlanStatus
+
+
+class FeedbackRequest(BaseModel):
+    plan_id: str | None = Field(default=None, max_length=80)
+    sender_role: Literal["COA", "ENGINEERING", "SNT", "TRD"]
+    recipient_role: Literal["COA", "ENGINEERING", "SNT", "TRD"]
+    department: Literal["ENGINEERING", "SNT", "TRD"]
+    task_id: str | None = Field(default=None, max_length=100)
+    message: str = Field(min_length=1, max_length=2000)
+    parent_id: int | None = None
+
+
+class FeedbackStatusRequest(BaseModel):
+    status: Literal["OPEN", "UNDER_REVIEW", "CHANGES_REQUESTED", "RESOLVED"]
+
+
+class LoginRequest(BaseModel):
+    username: str = Field(min_length=2, max_length=80)
+    password: str = Field(min_length=4, max_length=200)
+
+
+_LOGIN_ACCOUNTS = {
+    "coa": ("COA", "COA (Control Office Application)"),
+    "engineering": ("ENGINEERING", "Engineering (Civil & Track)"),
+    "snt": ("SNT", "S&T (Signal & Telecommunication)"),
+    "trd": ("TRD", "TRD (Traction Distribution)"),
+}
+
+
+def _feedback_response(item: DepartmentFeedback) -> dict:
+    sender_role = "COA" if item.sender_role == "BDMS" else item.sender_role
+    recipient_role = "COA" if item.recipient_role == "BDMS" else item.recipient_role
+    return {
+        "feedback_id": item.feedback_id, "plan_id": item.plan_id,
+        "sender_role": sender_role, "recipient_role": recipient_role,
+        "department": item.department, "task_id": item.task_id,
+        "message": item.message, "status": item.status, "parent_id": item.parent_id,
+        "created_at": item.created_at.isoformat(),
+    }
 
 
 def _default_data_dir() -> str:
@@ -151,6 +231,11 @@ def _schedule_response(result, dataset, *, scenario: str = "base") -> dict:
                 "latest_finish": task.latest_finish.isoformat(),
                 "priority": priority.score,
                 "priority_band": priority.band,
+                "priority_source": priority.prediction_source,
+                "priority_confidence": priority.confidence,
+                "priority_factors": list(priority.factors),
+                "priority_model_version": priority.model_version,
+                "ml_priority_score": priority.ml_score,
                 "resource_ids": list(candidate.resource_ids),
                 "slot_id": candidate.slot_id,
             }
@@ -340,6 +425,16 @@ def create_app(database_url: str | None = None) -> FastAPI:
     app.state.engine = engine
     app.state.sessions = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 
+    @app.post("/api/auth/login")
+    def login(request: LoginRequest):
+        username = request.username.strip().lower()
+        account = _LOGIN_ACCOUNTS.get(username)
+        expected_password = os.getenv(f"BLOCKSANGAM_{username.upper()}_PASSWORD", "blocksangam")
+        if account is None or not secrets.compare_digest(request.password, expected_password):
+            raise HTTPException(status_code=401, detail="Invalid username or password")
+        role, display_name = account
+        return {"role": role, "username": username, "display_name": display_name}
+
     @app.get("/api/health")
     def health():
         return {"status": "ok", "service": "BlockSangam", "advisory_only": True}
@@ -347,6 +442,10 @@ def create_app(database_url: str | None = None) -> FastAPI:
     @app.get("/api/scenarios")
     def scenarios():
         return {"scenarios": available_scenarios()}
+
+    @app.get("/api/scenario-options")
+    def get_scenario_options():
+        return scenario_options(_default_data_dir())
 
     @app.post("/api/schedule")
     def schedule(request: ScheduleRequest = ScheduleRequest()):
@@ -372,6 +471,25 @@ def create_app(database_url: str | None = None) -> FastAPI:
         except (FileNotFoundError, ValueError) as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         return _schedule_response(result, dataset, scenario=request.scenario)
+
+    @app.post("/api/scenarios/{scenario_id}/simulate")
+    def simulate(scenario_id: str, request: ScenarioSimulationRequest = ScenarioSimulationRequest()):
+        data_dir = request.data_dir or _default_data_dir()
+        try:
+            scenario_definition(scenario_id)
+            return simulate_scenario(scenario_id, data_dir, max_solve_time_seconds=request.max_solve_time)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        except FileNotFoundError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @app.post("/api/scenarios/simulate")
+    def simulate_custom(request: CustomScenarioSimulationRequest):
+        data_dir = request.data_dir or _default_data_dir()
+        try:
+            return simulate_custom_scenario(request.model_dump(exclude_none=True), data_dir, max_solve_time_seconds=request.max_solve_time)
+        except (ValueError, FileNotFoundError) as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     @app.post("/api/imports/validate")
     def validate_import(request: ImportRequest = ImportRequest()):
@@ -529,6 +647,55 @@ def create_app(database_url: str | None = None) -> FastAPI:
             return Response(content=stream.getvalue(), media_type="text/csv", headers={"Content-Disposition": f'attachment; filename="{plan_id}.csv"'})
         finally:
             session.close()
+
+    @app.get("/api/feedback")
+    def list_feedback(role: Literal["COA", "ENGINEERING", "SNT", "TRD"] | None = None):
+        session = app.state.sessions()
+        try:
+            query = session.query(DepartmentFeedback)
+            if role:
+                if role == "COA":
+                    query = query.filter(
+                        DepartmentFeedback.sender_role.in_(("COA", "BDMS")) |
+                        DepartmentFeedback.recipient_role.in_(("COA", "BDMS"))
+                    )
+                else:
+                    query = query.filter((DepartmentFeedback.sender_role == role) | (DepartmentFeedback.recipient_role == role))
+            items = query.order_by(DepartmentFeedback.created_at.desc(), DepartmentFeedback.feedback_id.desc()).all()
+            return {"items": [_feedback_response(item) for item in items]}
+        finally:
+            session.close()
+
+    @app.post("/api/feedback", status_code=201)
+    def create_feedback(request: FeedbackRequest):
+        if request.sender_role != "COA" and request.recipient_role != "COA":
+            raise HTTPException(status_code=422, detail="Department feedback must be sent to or from COA.")
+        item = DepartmentFeedback(**request.model_dump(), status="OPEN")
+        session = app.state.sessions()
+        try:
+            session.add(item); session.commit(); session.refresh(item)
+            return _feedback_response(item)
+        finally:
+            session.close()
+
+    @app.patch("/api/feedback/{feedback_id}")
+    def update_feedback(feedback_id: int, request: FeedbackStatusRequest):
+        session = app.state.sessions()
+        try:
+            item = session.get(DepartmentFeedback, feedback_id)
+            if item is None:
+                raise HTTPException(status_code=404, detail=f"Feedback {feedback_id} was not found.")
+            item.status = request.status; session.commit(); session.refresh(item)
+            return _feedback_response(item)
+        finally:
+            session.close()
+
+    @app.post("/api/reports/plan.pdf")
+    def export_schedule_pdf(schedule: dict):
+        if not schedule.get("schedule_entries") and not schedule.get("unscheduled"):
+            raise HTTPException(status_code=422, detail="A generated schedule is required for PDF export.")
+        content = build_plan_pdf(schedule)
+        return Response(content=content, media_type="application/pdf", headers={"Content-Disposition": 'attachment; filename="blocksangam-plan.pdf"'})
 
     return app
 

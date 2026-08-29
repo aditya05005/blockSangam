@@ -158,3 +158,18 @@ class PlanEvent(Base):
     event_type: Mapped[str] = mapped_column(String(50))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
     details: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+
+
+class DepartmentFeedback(Base):
+    __tablename__ = "department_feedback"
+
+    feedback_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    plan_id: Mapped[str | None] = mapped_column(String(80), nullable=True, index=True)
+    sender_role: Mapped[str] = mapped_column(String(30), index=True)
+    recipient_role: Mapped[str] = mapped_column(String(30), index=True)
+    department: Mapped[str] = mapped_column(String(30), index=True)
+    task_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    message: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(30), default="OPEN", index=True)
+    parent_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)

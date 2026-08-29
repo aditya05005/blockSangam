@@ -133,7 +133,10 @@ def explain_unscheduled(dataset: CanonicalDataset, candidates: CandidateGenerati
                 "priority": {
                     "score": priority[task.task_id].score,
                     "band": priority[task.task_id].band,
-                    "contributions": priority[task.task_id].components.__dict__,
+                    "source": priority[task.task_id].prediction_source,
+                    "confidence": priority[task.task_id].confidence,
+                    "factors": list(priority[task.task_id].factors),
+                    "model_version": priority[task.task_id].model_version,
                 },
                 "status": "UNSCHEDULED",
                 "reason_code": reason,

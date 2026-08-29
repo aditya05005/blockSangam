@@ -2,8 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from app.domain.models import Task
-from .config import PriorityConfig
-from .scoring import PriorityComponents, calculate_score
+from app.ml.inference import load_priority_predictor
 
 
 @dataclass(frozen=True)
@@ -13,22 +12,44 @@ class PriorityResult:
     band: str
     mandatory: bool
     latest_finish: datetime
-    components: PriorityComponents
+    prediction_source: str
+    confidence: float
+    factors: tuple[str, ...]
+    model_version: str
+    ml_score: float
+
+
+def _risk_band(score: float) -> str:
+    if score >= 0.75:
+        return "CRITICAL"
+    if score >= 0.55:
+        return "HIGH"
+    if score >= 0.35:
+        return "MEDIUM"
+    return "LOW"
 
 
 class PriorityEngine:
-    def __init__(self, config: PriorityConfig | None = None):
-        self.config = config or PriorityConfig()
+    """Authoritative ML priority provider used directly by CP-SAT."""
+
+    def __init__(self):
+        # The artifact is required: there is deliberately no rules fallback.
+        self.predictor = load_priority_predictor()
 
     def score_task(self, task: Task) -> PriorityResult:
-        score, components = calculate_score(task, self.config)
+        prediction = self.predictor.predict(task)
+        score = prediction.score
         return PriorityResult(
             task_id=task.task_id,
             score=score,
-            band=self.config.band(score),
+            band=_risk_band(score),
             mandatory=task.mandatory,
             latest_finish=task.latest_finish,
-            components=components,
+            prediction_source="ML_MODEL",
+            confidence=prediction.confidence,
+            factors=prediction.factors,
+            model_version=prediction.model_version,
+            ml_score=prediction.score,
         )
 
     def rank(self, tasks: list[Task]) -> list[PriorityResult]:

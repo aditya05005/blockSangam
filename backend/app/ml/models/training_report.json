@@ -1,0 +1,27 @@
+{
+  "model": "RandomForestRegressor",
+  "version": "outcome-risk-rf-3.0.0",
+  "target": "outcome_risk_score",
+  "target_definition": "Composite of failure after deferral, safety escalation, emergency intervention, disruption minutes, and maintenance effectiveness",
+  "uses_existing_priority": false,
+  "training_rows": 6400,
+  "test_rows": 1600,
+  "mae": 0.17318,
+  "r2": 0.145626,
+  "confidence_calibration": "held-out q90 error + ensemble disagreement + feature novelty",
+  "features": [
+    "criticality",
+    "defect_severity",
+    "asset_criticality",
+    "failure_consequence",
+    "deferral_history",
+    "mandatory",
+    "duration_minutes",
+    "restoration_minutes",
+    "power_isolation",
+    "snt_disconnection",
+    "department_risk",
+    "window_hours",
+    "traffic_block"
+  ]
+}
