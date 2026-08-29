@@ -1,0 +1,184 @@
+{
+  "schema_version": "1.0",
+  "status": "VALID_OPTIMAL",
+  "summary": {
+    "tasks_considered": 11,
+    "tasks_scheduled": 9,
+    "candidates_generated": 50,
+    "candidates_selected": 9,
+    "joint_blocks": 8,
+    "total_time_seconds": 0.063
+  },
+  "blocks": [
+    {
+      "block_id": "JB-0001",
+      "section": "A-B",
+      "line": "DOWN",
+      "start_time": "2026-08-28T02:30:00+05:30",
+      "end_time": "2026-08-28T03:15:00+05:30",
+      "candidate_ids": [
+        "CAND-0009"
+      ],
+      "task_ids": [
+        "ENG-002"
+      ],
+      "resource_ids": [
+        "RES-ENG-01"
+      ],
+      "block_type": "FULL_BLOCK",
+      "traffic_block": false,
+      "power_isolation": false,
+      "snt_disconnection": false
+    },
+    {
+      "block_id": "JB-0002",
+      "section": "B-C",
+      "line": "DOWN",
+      "start_time": "2026-08-28T00:00:00+05:30",
+      "end_time": "2026-08-28T00:45:00+05:30",
+      "candidate_ids": [
+        "CAND-0011"
+      ],
+      "task_ids": [
+        "ENG-004"
+      ],
+      "resource_ids": [
+        "RES-ENG-01"
+      ],
+      "block_type": "FULL_BLOCK",
+      "traffic_block": false,
+      "power_isolation": false,
+      "snt_disconnection": false
+    },
+    {
+      "block_id": "JB-0003",
+      "section": "B-C",
+      "line": "DOWN",
+      "start_time": "2026-08-28T01:00:00+05:30",
+      "end_time": "2026-08-28T02:35:00+05:30",
+      "candidate_ids": [
+        "CAND-0036"
+      ],
+      "task_ids": [
+        "SNT-002"
+      ],
+      "resource_ids": [
+        "RES-SNT-01"
+      ],
+      "block_type": "FULL_BLOCK",
+      "traffic_block": false,
+      "power_isolation": false,
+      "snt_disconnection": false
+    },
+    {
+      "block_id": "JB-0004",
+      "section": "B-C",
+      "line": "UP",
+      "start_time": "2026-08-27T00:00:00+05:30",
+      "end_time": "2026-08-27T00:30:00+05:30",
+      "candidate_ids": [
+        "CAND-0016"
+      ],
+      "task_ids": [
+        "ENG-005"
+      ],
+      "resource_ids": [
+        "RES-ENG-01"
+      ],
+      "block_type": "FULL_BLOCK",
+      "traffic_block": false,
+      "power_isolation": false,
+      "snt_disconnection": false
+    },
+    {
+      "block_id": "JB-0005",
+      "section": "B-C",
+      "line": "UP",
+      "start_time": "2026-08-27T01:00:00+05:30",
+      "end_time": "2026-08-27T03:30:00+05:30",
+      "candidate_ids": [
+        "CAND-0039",
+        "CAND-0003"
+      ],
+      "task_ids": [
+        "TRD-001",
+        "ENG-001"
+      ],
+      "resource_ids": [
+        "RES-ENG-01",
+        "RES-TRD-01"
+      ],
+      "block_type": "FULL_BLOCK",
+      "traffic_block": false,
+      "power_isolation": false,
+      "snt_disconnection": false
+    },
+    {
+      "block_id": "JB-0006",
+      "section": "B-C",
+      "line": "UP",
+      "start_time": "2026-08-28T00:00:00+05:30",
+      "end_time": "2026-08-28T01:00:00+05:30",
+      "candidate_ids": [
+        "CAND-0028"
+      ],
+      "task_ids": [
+        "SNT-001"
+      ],
+      "resource_ids": [
+        "RES-SNT-01"
+      ],
+      "block_type": "FULL_BLOCK",
+      "traffic_block": false,
+      "power_isolation": false,
+      "snt_disconnection": false
+    },
+    {
+      "block_id": "JB-0007",
+      "section": "C-D",
+      "line": "DOWN",
+      "start_time": "2026-08-29T01:00:00+05:30",
+      "end_time": "2026-08-29T02:15:00+05:30",
+      "candidate_ids": [
+        "CAND-0050"
+      ],
+      "task_ids": [
+        "TRD-002"
+      ],
+      "resource_ids": [
+        "RES-TRD-01"
+      ],
+      "block_type": "FULL_BLOCK",
+      "traffic_block": false,
+      "power_isolation": false,
+      "snt_disconnection": false
+    },
+    {
+      "block_id": "JB-0008",
+      "section": "C-D",
+      "line": "UP",
+      "start_time": "2026-08-29T01:00:00+05:30",
+      "end_time": "2026-08-29T02:00:00+05:30",
+      "candidate_ids": [
+        "CAND-0010"
+      ],
+      "task_ids": [
+        "ENG-003"
+      ],
+      "resource_ids": [
+        "RES-ENG-01"
+      ],
+      "block_type": "FULL_BLOCK",
+      "traffic_block": false,
+      "power_isolation": false,
+      "snt_disconnection": false
+    }
+  ],
+  "validation": {
+    "valid": true,
+    "errors": [],
+    "warnings": [],
+    "checked_tasks": 11,
+    "checked_blocks": 8
+  }
+}
